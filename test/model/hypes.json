@@ -1,6 +1,6 @@
 {
     "model": {
-        "input_file": "input.py",
+        "dataset_file": "dataset.py",
         "architecture_file" : "architect.py",
         "objective_file" : "objective.py",
         "optimizer_file" : "optimizer.py",

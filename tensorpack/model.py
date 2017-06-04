@@ -94,20 +94,20 @@ class Model(object):
         model_path = os.path.join(self.path, TFP_MODEL_DIR)
         sys.path.append(model_path)
 
-        from input import Input
+        from dataset import Datasets
         from objective import Objective
         from optimizer import Optimizer
         from evaluator import Evaluator
         from architect import Architect
 
-        self.input = Input()
+        self.datasets = Datasets()
         self.objective = Objective()
         self.optimizer = Optimizer()
         self.evaluator = Evaluator()
         self.architect = Architect()
 
         # Sanity check
-        assert issubclass(type(self.input), InputBase), 'Got ' + type(self.input)
+        assert issubclass(type(self.datasets), DatasetsBase), 'Got ' + type(self.datasets)
         assert issubclass(type(self.objective), ObjectiveBase), 'Got ' + type(self.objective)
         assert issubclass(type(self.optimizer), OptimizerBase), 'Got ' + type(self.optimizer)
         assert issubclass(type(self.evaluator), EvaluatorBase), 'Got ' + type(self.evaluator)
@@ -188,8 +188,8 @@ class Model(object):
 
         # Move files to run dir
         shutil.copy(
-            os.path.join(hypes_dir_path, hypes['model']['input_file']),
-            os.path.join(model_dir, 'input.py')
+            os.path.join(hypes_dir_path, hypes['model']['dataset_file']),
+            os.path.join(model_dir, 'dataset.py')
         )
 
         shutil.copy(
@@ -278,9 +278,11 @@ class Model(object):
 
         logging.info('Start straining')
 
+        self.datasets.create(hypes)
+
         for step in range(start_step, hypes['solver']['max_steps']):
             lr = self.optimizer.get_learning_rate(hypes, step)
-            input, labels = self.input.inputs(hypes)
+            input, labels = self.datasets.train.next_batch(hypes['solver']['batch_size'])
 
             feed_dict = {
                 train_graph['learning_rate']: lr,
@@ -317,7 +319,8 @@ class Model(object):
                 eval_dict = self.evaluator.evaluate(hypes,
                                                     sess,
                                                     inference_graph['input_pl'],
-                                                    inference_graph['logits'])
+                                                    inference_graph['logits'],
+                                                    self.datasets)
 
 
                 logging.info("Evaluation Finished. All results will be saved to: " + hypes['dirs']['output_dir'])
