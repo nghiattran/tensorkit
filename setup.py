@@ -1,15 +1,13 @@
 #!/usr/bin/env python
 
-from setuptools import find_packages
-from setuptools import setup
+from distutils.core import setup
 
 setup(
     name='tensorpack',
     version='0.0',
-    packages=find_packages(),
+    packages=['tensorpack', 'tensorpack/examples'],
     description='Python Distribution Utilities',
     author='Nghia Tran',
     author_email='nghiattran3@gmail.com',
-    install_requires=['numpy', 'scipy'],
     license="MIT",
 )
