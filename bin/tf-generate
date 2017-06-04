@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import shutil
+import argparse
+import os
+from tensorpack.model import mkdir_p
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Path viewer')
+    parser.add_argument('destination', type=str, help='Destination folder for generated model.')
+
+    args = parser.parse_args()
+    mkdir_p(args.destination)
+
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    template_path = os.path.join(dir_path,  '..', '..', 'templates')
+    src_files = os.listdir(template_path)
+
+    for file in src_files:
+        file_path = os.path.join(template_path, file)
+        if os.path.isfile(file_path):
+            shutil.copy(file_path, args.destination)

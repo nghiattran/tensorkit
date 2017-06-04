@@ -59,6 +59,63 @@ def _write_eval_dict_to_summary(eval_dict, tag, summary_writer, global_step):
     return
 
 
+def _check_file_exist(hypes, hypes_dir, key1, key2):
+
+    _check_path_exist(hypes=hypes,
+                      hypes_dir=hypes_dir,
+                      key1=key1,
+                      key2=key2)
+
+    file_path = os.path.join(hypes_dir, hypes[key1][key2])
+    assert os.path.isfile(file_path), 'Error! hypes["%s"]["%s"] is not a file.' % (key1, key2)
+
+def _check_path_exist(hypes, hypes_dir, key1, key2):
+    msg = 'Error! %s does not exist in hypes["%s"] or not a string.' % (key1, key2)
+    conds = (
+        key1 in hypes and
+        key2 in hypes[key1] and
+        isinstance(hypes['data']['train_file'], six.string_types)
+    )
+    assert conds, msg
+
+    file_path = os.path.join(hypes_dir, hypes[key1][key2])
+    assert os.path.exists(file_path), 'Error! hypes["%s"]["%s"] is not a valid path.' % (key1, key2)
+
+
+def _check_hypes(hypes, hypes_dir):
+    assert 'data' in hypes
+    _check_path_exist(hypes=hypes,
+                      hypes_dir=hypes_dir,
+                      key1='data',
+                      key2='val_file')
+    _check_path_exist(hypes=hypes,
+                      hypes_dir=hypes_dir,
+                      key1='data',
+                      key2='train_file')
+
+    assert 'model' in hypes
+    _check_file_exist(hypes=hypes,
+                      hypes_dir=hypes_dir,
+                      key1='model',
+                      key2='dataset_file')
+    _check_file_exist(hypes=hypes,
+                      hypes_dir=hypes_dir,
+                      key1='model',
+                      key2='architecture_file')
+    _check_file_exist(hypes=hypes,
+                      hypes_dir=hypes_dir,
+                      key1='model',
+                      key2='objective_file')
+    _check_file_exist(hypes=hypes,
+                      hypes_dir=hypes_dir,
+                      key1='model',
+                      key2='evaluator_file')
+    _check_file_exist(hypes=hypes,
+                      hypes_dir=hypes_dir,
+                      key1='model',
+                      key2='optimizer_file')
+
+
 def create_filewrite_handler(logging_file, mode='w'):
     """
     Create a filewriter handler.
@@ -87,7 +144,19 @@ def create_filewrite_handler(logging_file, mode='w'):
 
 
 class Model(object):
-    def __init__(self, hypes):
+    def __init__(self, run_dir):
+        model_dir = os.path.join(run_dir, TFP_MODEL_DIR)
+        with open(os.path.join(model_dir, 'hypes.json'), 'r') as hypes_file:
+            hypes = json.load(hypes_file)
+
+        logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
+                            level=logging.DEBUG,
+                            stream=sys.stdout)
+
+        create_filewrite_handler(os.path.join(run_dir, 'output.log'))
+        print(hypes['data'])
+        _check_hypes(hypes, model_dir)
+
         self.hypes = hypes
         self.path = hypes['dirs']['output_dir']
 
@@ -157,6 +226,8 @@ class Model(object):
         with open(args.hypes, 'r') as hypes_file:
             hypes = json.load(hypes_file)
 
+        _check_hypes(hypes, os.path.split(args.hypes)[0])
+
         if args.name == '':
             filename = os.path.split(args.hypes)[1]
             args.name = os.path.splitext(filename)[0]
@@ -176,7 +247,7 @@ class Model(object):
         hypes['dirs']['image_dir'] = os.path.join(run_dir, TFP_IMAGE_DIR)
 
         # Update data path ralatively to current working directory
-        hypes_dir_path = os.path.split(args.hypes)[0]
+        hypes_dir_path = os.path.abspath(os.path.split(args.hypes)[0])
         hypes['data']['train_file'] = os.path.join(hypes_dir_path, hypes['data']['train_file'])
         hypes['data']['val_file'] = os.path.join(hypes_dir_path, hypes['data']['val_file'])
 
@@ -210,13 +281,7 @@ class Model(object):
         with open(os.path.join(model_dir, 'hypes.json'), 'w') as outfile:
             json.dump(hypes, outfile, indent=4)
 
-        logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
-                            level=logging.DEBUG,
-                            stream=sys.stdout)
-
-        create_filewrite_handler(os.path.join(run_dir, 'output.log'))
-
-        return Model(hypes)
+        return Model(run_dir)
 
     def train(self):
         hypes = self.hypes
