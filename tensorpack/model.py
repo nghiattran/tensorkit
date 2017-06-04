@@ -113,14 +113,8 @@ class Model(object):
         assert issubclass(type(self.evaluator), EvaluatorBase), 'Got ' + type(self.evaluator)
         assert issubclass(type(self.architect), ArchitectBase), 'Got ' + type(self.architect)
 
-    def build_trainning_graph(self, hypes):
-        learning_rate = tf.placeholder(tf.float32, name='learning_rate')
-
-        phase = 'train'
-        with tf.name_scope("Inputs"):
-            input_pl = tf.placeholder(tf.float32)
-            labels_pl = tf.placeholder(tf.float32)
-
+    def build_trainning_graph(self, hypes, input_pl, labels_pl):
+        phase = 'Train'
         logits = self.architect.build_graph(self.hypes, input_pl, phase.lower())
 
         with tf.name_scope("Loss"):
@@ -128,7 +122,9 @@ class Model(object):
             eval_list = self.objective.evaluate(hypes, input_pl, labels_pl, logits, losses)
 
         with tf.name_scope("Optimizer"):
+            learning_rate = tf.placeholder(tf.float32, name='learning_rate')
             global_step = tf.Variable(0, trainable=False, name='global_step')
+
             # Build training operation
             train_op = self.optimizer.train(hypes, losses, global_step, learning_rate)
 
@@ -145,12 +141,10 @@ class Model(object):
             'labels_pl': labels_pl
         }
 
-    def build_inference_graph(self, hypes):
+    def build_inference_graph(self, hypes, input_pl):
         phase = 'Inference'
         with tf.name_scope(phase):
             tf.get_variable_scope().reuse_variables()
-            input_pl = tf.placeholder(tf.float32)
-
             logits = self.architect.build_graph(self.hypes, input_pl, phase.lower())
 
         return {
@@ -228,9 +222,16 @@ class Model(object):
         hypes = self.hypes
 
         with tf.Session() as sess:
-            train_graph = self.build_trainning_graph(hypes=hypes)
-            inference_graph = self.build_inference_graph(hypes=hypes)
-            # inference_graph = {}
+            with tf.name_scope("Inputs"):
+                input_pl = tf.placeholder(tf.float32)
+                labels_pl = tf.placeholder(tf.float32)
+
+            train_graph = self.build_trainning_graph(hypes=hypes,
+                                                     input_pl=input_pl,
+                                                     labels_pl=labels_pl)
+
+            inference_graph = self.build_inference_graph(hypes=hypes,
+                                                         input_pl=input_pl)
 
             init_func = getattr(self.architect, "init", None)
             if callable(init_func):

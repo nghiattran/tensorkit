@@ -25,17 +25,17 @@ def max_pool_2x2(x):
 
 class Architect(ArchitectBase):
     def build_graph(self, hypes, input, phase):
-        vh = VariableHanlder()
-
-        keep_prob_val = 1.0 if phase == 'train' else hypes['solver'].get('keep_prob')
-        keep_prob = tf.Variable(tf.constant(keep_prob_val))
-
-        x_image = tf.reshape(input, [-1, 28, 28, 1])
-
         initializer = tf.contrib.layers.xavier_initializer()
         regularizer = tf.contrib.layers.l2_regularizer(hypes['solver'].get('reg_strength', 1e-3))
 
         with tf.variable_scope('Network', initializer=initializer, regularizer=regularizer):
+            vh = VariableHanlder()
+
+            keep_prob_val = 1.0 if phase == 'train' else hypes['solver'].get('keep_prob')
+            keep_prob = tf.Variable(tf.constant(keep_prob_val))
+
+            x_image = tf.reshape(input, [-1, 28, 28, 1])
+
             W_conv1, b_conv1 = vh.weight_and_bias([5, 5, 1, 32])
 
             h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
