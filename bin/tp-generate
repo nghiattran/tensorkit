@@ -26,6 +26,6 @@ if __name__ == '__main__':
     for file in src_files:
         file_path = os.path.join(template_path, file)
         name, ext = os.path.splitext(file)
-        if os.path.isfile(file_path) and ext == '.py':
+        if os.path.isfile(file_path) and ext != '.pyc':
             shutil.copy(file_path, args.destination)
             print(' ', file, 'is generated at:', args.destination)
