@@ -34,7 +34,7 @@ def mkdir_p(path):
 def _print_training_status(hypes, step, loss_value, start_time, lr):
     duration = float(time.time() - start_time)
     examples_per_sec = hypes['solver']['batch_size'] / duration
-    msg = 'Step: %d/%d, Loss: %.3f, lr: %f, %.4fsec (per batch); %.3f imgs/sec' % (step, hypes['solver']['max_steps'], loss_value, lr, duration, examples_per_sec)
+    msg = 'Step: %d/%d, Loss: %.3f, lr: %g, %.4f sec (per batch); %.3f imgs/sec' % (step, hypes['solver']['max_steps'], loss_value, lr, duration, examples_per_sec)
     logging.info(msg)
 
 
@@ -256,7 +256,7 @@ class Model(object):
         return Model(run_dir)
 
     def build_training_graph(self, hypes, input_pl, labels_pl):
-        phase = 'Train'
+        phase = 'train'
         logits = self.architect.build_graph(self.hypes, input_pl, phase.lower())
 
         with tf.name_scope("Loss"):
@@ -294,9 +294,7 @@ class Model(object):
             'logits': logits
         }
 
-    def build_graph(self, hypes):
-        sess = tf.Session()
-
+    def build_graph(self, sess, hypes):
         with tf.name_scope("Data"):
             input_pl = tf.placeholder(tf.float32, name='input')
             labels_pl = tf.placeholder(tf.float32, name='labels')
@@ -305,70 +303,69 @@ class Model(object):
                                                 input_pl=input_pl,
                                                 labels_pl=labels_pl)
 
-        inference_graph = self.build_inference_graph(hypes=hypes,
-                                                     input_pl=input_pl)
-
         summary_writer = tf.summary.FileWriter(hypes['dirs']['log_dir'],
                                                graph=sess.graph)
         train_graph['summary_writer'] = summary_writer
 
-        return sess, train_graph, inference_graph
+        inference_graph = self.build_inference_graph(hypes=hypes,
+                                                     input_pl=input_pl)
+
+        saver = tf.train.Saver()
+
+        return train_graph, inference_graph, saver
 
     def evaluate(self):
         hypes = self.hypes
-        sess, train_graph, inference_graph = self.build_graph(hypes)
+        with tf.Session() as sess:
+            train_graph, inference_graph, saver = self.build_graph(sess, hypes)
 
-        saver = tf.train.Saver()
-        load_weight(checkpoint_dir=hypes['dirs']['log_dir'],
-                                   sess=sess,
-                                   saver=saver)
+            load_weight(checkpoint_dir=hypes['dirs']['log_dir'],
+                                       sess=sess,
+                                       saver=saver)
 
-        self.do_evaluate(hypes=hypes,
-                         sess=sess,
-                         input_pl=inference_graph['input_pl'],
-                         logits=inference_graph['logits'])
+            self.do_evaluate(hypes=hypes,
+                             sess=sess,
+                             input_pl=inference_graph['input_pl'],
+                             logits=inference_graph['logits'])
 
     def train(self):
         hypes = self.hypes
-        sess, train_graph, inference_graph = self.build_graph(hypes)
+        with tf.Session() as sess:
+            train_graph, inference_graph, saver = self.build_graph(sess, hypes)
 
-        # If init function is defined, call it
-        # This can be used to load pretrained network
-        init_func = getattr(self.architect, "init", None)
-        if callable(init_func):
-            init_func(hypes)
-        else:
-            init = tf.global_variables_initializer()
-            sess.run(init)
+            # If init function is defined, call it
+            # This can be used to load pretrained network
+            init_func = getattr(self.architect, "init", None)
+            if callable(init_func):
+                init_func(hypes)
+            else:
+                init = tf.global_variables_initializer()
+                sess.run(init)
 
-        saver = tf.train.Saver()
+            self.run_training(hypes=hypes,
+                              sess=sess,
+                              train_graph=train_graph,
+                              inference_graph=inference_graph,
+                              saver=saver,
+                              start_step=0)
 
-        self.run_training(hypes=hypes,
-                          sess=sess,
-                          train_graph=train_graph,
-                          inference_graph=inference_graph,
-                          saver=saver,
-                          start_step=0)
-
-        sess.close()
 
     def continue_training(self):
         hypes = self.hypes
-        sess, train_graph, inference_graph = self.build_graph(hypes)
+        with tf.Session() as sess:
+            train_graph, inference_graph, saver = self.build_graph(sess, hypes)
 
-        saver = tf.train.Saver()
-        current_step = load_weight(checkpoint_dir=hypes['dirs']['log_dir'],
-                                   sess=sess,
-                                   saver=saver)
+            current_step = load_weight(checkpoint_dir=hypes['dirs']['log_dir'],
+                                       sess=sess,
+                                       saver=saver)
 
-        self.run_training(hypes=hypes,
-                          sess=sess,
-                          train_graph=train_graph,
-                          inference_graph=inference_graph,
-                          saver=saver,
-                          start_step=current_step)
+            self.run_training(hypes=hypes,
+                              sess=sess,
+                              train_graph=train_graph,
+                              inference_graph=inference_graph,
+                              saver=saver,
+                              start_step=current_step)
 
-        sess.close()
 
     def run_training(self, hypes, sess, train_graph, inference_graph, saver, start_step=0):
         eval_names, eval_ops = zip(*train_graph['eval_list'])
