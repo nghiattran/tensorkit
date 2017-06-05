@@ -143,26 +143,30 @@ def create_filewrite_handler(logging_file, mode='w'):
     return filewriter
 
 
+def load_weight(checkpoint_dir, sess, saver):
+    ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
+    if ckpt and ckpt.model_checkpoint_path:
+        logging.info(ckpt.model_checkpoint_path)
+        file = os.path.basename(ckpt.model_checkpoint_path)
+        checkpoint_path = os.path.join(checkpoint_dir, file)
+        saver.restore(sess, checkpoint_path)
+        return int(file.split('-')[1])
+    raise ValueError('No checkpoint found at: %s' % checkpoint_dir)
+
+
 class Model(object):
-    def __init__(self, run_dir):
-        model_dir = os.path.join(run_dir, TFP_MODEL_DIR)
-        with open(os.path.join(model_dir, 'hypes.json'), 'r') as hypes_file:
+    def __init__(self, log_dir):
+        # Load hypes
+        model_path = os.path.join(log_dir, TFP_MODEL_DIR)
+        with open(os.path.join(model_path, 'hypes.json'), 'r') as hypes_file:
             hypes = json.load(hypes_file)
 
-        logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
-                            level=logging.DEBUG,
-                            stream=sys.stdout)
-
-        create_filewrite_handler(os.path.join(run_dir, 'output.log'))
-        print(hypes['data'])
-        _check_hypes(hypes, model_dir)
+        # Check hypes if hypes is set correctly
+        _check_hypes(hypes, model_path)
 
         self.hypes = hypes
-        self.path = hypes['dirs']['output_dir']
 
-        model_path = os.path.join(self.path, TFP_MODEL_DIR)
         sys.path.append(model_path)
-
         from dataset import Datasets
         from objective import Objective
         from optimizer import Optimizer
@@ -170,6 +174,7 @@ class Model(object):
         from architect import Architect
 
         self.datasets = Datasets()
+        self.datasets.create(hypes)
         self.objective = Objective()
         self.optimizer = Optimizer()
         self.evaluator = Evaluator()
@@ -182,44 +187,11 @@ class Model(object):
         assert issubclass(type(self.evaluator), EvaluatorBase), 'Got ' + type(self.evaluator)
         assert issubclass(type(self.architect), ArchitectBase), 'Got ' + type(self.architect)
 
-    def build_trainning_graph(self, hypes, input_pl, labels_pl):
-        phase = 'Train'
-        logits = self.architect.build_graph(self.hypes, input_pl, phase.lower())
+        logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
+                            level=logging.DEBUG,
+                            stream=sys.stdout)
 
-        with tf.name_scope("Loss"):
-            losses = self.objective.loss(hypes, logits, labels_pl)
-            eval_list = self.objective.evaluate(hypes, input_pl, labels_pl, logits, losses)
-
-        with tf.name_scope("Optimizer"):
-            learning_rate = tf.placeholder(tf.float32, name='learning_rate')
-            global_step = tf.Variable(0, trainable=False, name='global_step')
-
-            # Build training operation
-            train_op = self.optimizer.train(hypes, losses, global_step, learning_rate)
-
-        summary_op = tf.summary.merge_all()
-
-        return {
-            'summary_op': summary_op,
-            'train_op': train_op,
-            'eval_list': eval_list,
-            'losses': losses,
-            'logits': logits,
-            'learning_rate': learning_rate,
-            'input_pl': input_pl,
-            'labels_pl': labels_pl
-        }
-
-    def build_inference_graph(self, hypes, input_pl):
-        phase = 'Inference'
-        with tf.name_scope(phase):
-            tf.get_variable_scope().reuse_variables()
-            logits = self.architect.build_graph(self.hypes, input_pl, phase.lower())
-
-        return {
-            'input_pl': input_pl,
-            'logits': logits
-        }
+        create_filewrite_handler(os.path.join(log_dir, 'output.log'))
 
     @staticmethod
     def setup(args):
@@ -242,7 +214,7 @@ class Model(object):
         mkdir_p(model_dir)
 
         hypes['dirs'] = hypes.get('dirs', {})
-        hypes['dirs']['output_dir'] = run_dir
+        hypes['dirs']['log_dir'] = run_dir
         hypes['dirs']['model_dir'] = model_dir
         hypes['dirs']['image_dir'] = os.path.join(run_dir, TFP_IMAGE_DIR)
 
@@ -283,68 +255,125 @@ class Model(object):
 
         return Model(run_dir)
 
+    def build_training_graph(self, hypes, input_pl, labels_pl):
+        phase = 'Train'
+        logits = self.architect.build_graph(self.hypes, input_pl, phase.lower())
+
+        with tf.name_scope("Loss"):
+            losses = self.objective.loss(hypes, logits, labels_pl)
+            eval_list = self.objective.evaluate(hypes, input_pl, labels_pl, logits, losses)
+
+        with tf.name_scope("Optimizer"):
+            learning_rate = tf.placeholder(tf.float32, name='learning_rate')
+            global_step = tf.Variable(0, trainable=False, name='global_step')
+
+            # Build training operation
+            train_op = self.optimizer.train(hypes, losses, global_step, learning_rate)
+
+        summary_op = tf.summary.merge_all()
+
+        return {
+            'summary_op': summary_op,
+            'train_op': train_op,
+            'eval_list': eval_list,
+            'losses': losses,
+            'logits': logits,
+            'learning_rate': learning_rate,
+            'input_pl': input_pl,
+            'labels_pl': labels_pl
+        }
+
+    def build_inference_graph(self, hypes, input_pl):
+        phase = 'Inference'
+        with tf.name_scope(phase):
+            tf.get_variable_scope().reuse_variables()
+            logits = self.architect.build_graph(self.hypes, input_pl, phase.lower())
+
+        return {
+            'input_pl': input_pl,
+            'logits': logits
+        }
+
+    def build_graph(self, hypes):
+        sess = tf.Session()
+
+        with tf.name_scope("Data"):
+            input_pl = tf.placeholder(tf.float32, name='input')
+            labels_pl = tf.placeholder(tf.float32, name='labels')
+
+        train_graph = self.build_training_graph(hypes=hypes,
+                                                input_pl=input_pl,
+                                                labels_pl=labels_pl)
+
+        inference_graph = self.build_inference_graph(hypes=hypes,
+                                                     input_pl=input_pl)
+
+        summary_writer = tf.summary.FileWriter(hypes['dirs']['log_dir'],
+                                               graph=sess.graph)
+        train_graph['summary_writer'] = summary_writer
+
+        return sess, train_graph, inference_graph
+
+    def evaluate(self):
+        hypes = self.hypes
+        sess, train_graph, inference_graph = self.build_graph(hypes)
+
+        saver = tf.train.Saver()
+        load_weight(checkpoint_dir=hypes['dirs']['log_dir'],
+                                   sess=sess,
+                                   saver=saver)
+
+        self.do_evaluate(hypes=hypes,
+                         sess=sess,
+                         input_pl=inference_graph['input_pl'],
+                         logits=inference_graph['logits'])
+
     def train(self):
         hypes = self.hypes
+        sess, train_graph, inference_graph = self.build_graph(hypes)
 
-        with tf.Session() as sess:
-            with tf.name_scope("Inputs"):
-                input_pl = tf.placeholder(tf.float32)
-                labels_pl = tf.placeholder(tf.float32)
+        # If init function is defined, call it
+        # This can be used to load pretrained network
+        init_func = getattr(self.architect, "init", None)
+        if callable(init_func):
+            init_func(hypes)
+        else:
+            init = tf.global_variables_initializer()
+            sess.run(init)
 
-            train_graph = self.build_trainning_graph(hypes=hypes,
-                                                     input_pl=input_pl,
-                                                     labels_pl=labels_pl)
+        saver = tf.train.Saver()
 
-            inference_graph = self.build_inference_graph(hypes=hypes,
-                                                         input_pl=input_pl)
+        self.run_training(hypes=hypes,
+                          sess=sess,
+                          train_graph=train_graph,
+                          inference_graph=inference_graph,
+                          saver=saver,
+                          start_step=0)
 
-            init_func = getattr(self.architect, "init", None)
-            if callable(init_func):
-                init_func(hypes)
-            else:
-                init = tf.global_variables_initializer()
-                sess.run(init)
-
-            summary_writer = tf.summary.FileWriter(hypes['dirs']['output_dir'],
-                                                   graph=sess.graph)
-            train_graph['summary_writer'] = summary_writer
-
-            self.run_training(hypes, sess, train_graph, inference_graph)
+        sess.close()
 
     def continue_training(self):
         hypes = self.hypes
+        sess, train_graph, inference_graph = self.build_graph(hypes)
 
-        with tf.Session() as sess:
-            train_graph = self.build_trainning_graph(hypes=hypes)
-            inference_graph = self.build_inference_graph(hypes=hypes)
-
-            init_func = getattr(self.architect, "init", None)
-            if callable(init_func):
-                init_func(hypes)
-            else:
-                init = tf.global_variables_initializer()
-                sess.run(init)
-
-            summary_writer = tf.summary.FileWriter(hypes['dirs']['output_dir'],
-                                                   graph=sess.graph)
-            train_graph['summary_writer'] = summary_writer
-
-            coord = tf.train.Coordinator()
-            threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-
-            self.run_training(hypes, sess, train_graph, inference_graph)
-
-            coord.request_stop()
-            coord.join(threads)
-
-    def run_training(self, hypes, sess, train_graph, inference_graph, start_step=0):
         saver = tf.train.Saver()
+        current_step = load_weight(checkpoint_dir=hypes['dirs']['log_dir'],
+                                   sess=sess,
+                                   saver=saver)
 
+        self.run_training(hypes=hypes,
+                          sess=sess,
+                          train_graph=train_graph,
+                          inference_graph=inference_graph,
+                          saver=saver,
+                          start_step=current_step)
+
+        sess.close()
+
+    def run_training(self, hypes, sess, train_graph, inference_graph, saver, start_step=0):
         eval_names, eval_ops = zip(*train_graph['eval_list'])
 
         logging.info('Start straining')
-
-        self.datasets.create(hypes)
 
         for step in range(start_step, hypes['solver']['max_steps']):
             lr = self.optimizer.get_learning_rate(hypes, step)
@@ -381,21 +410,31 @@ class Model(object):
                 _print_eval_dict_one_line(eval_names, eval_results, prefix='   (raw)')
 
             if step % hypes['logging']['eval_iter'] == 0 and step > 0:
-                logging.info('Running Evaluation Script.')
-                eval_dict = self.evaluator.evaluate(hypes,
-                                                    sess,
-                                                    inference_graph['input_pl'],
-                                                    inference_graph['logits'],
-                                                    self.datasets)
+                eval_dict = self.do_evaluate(hypes=hypes,
+                                             sess=sess,
+                                             input_pl=inference_graph['input_pl'],
+                                             logits=inference_graph['logits'])
 
-
-                logging.info("Evaluation Finished. All results will be saved to: " + hypes['dirs']['output_dir'])
-
-                logging.info('Raw Results:')
-                _print_eval_dict(eval_dict, prefix='(raw)   ')
+                logging.info("Evaluation Finished. All results will be saved to: " + hypes['dirs']['log_dir'])
                 _write_eval_dict_to_summary(eval_dict, 'Evaluation',
                                             train_graph['summary_writer'], step)
 
             if step % hypes['logging']['save_iter'] == 0 and step > 0:
-                save_path = saver.save(sess, os.path.join(self.path, "model-%d.ckpt" % step))
+                save_path = saver.save(sess, os.path.join(hypes['dirs']['log_dir'], "model-%d" % step))
                 logging.info('Model saved at %s' % save_path)
+
+
+    def do_evaluate(self, hypes, sess, input_pl, logits):
+
+        logging.info('Running Evaluation Script.')
+        eval_dict = self.evaluator.evaluate(hypes,
+                                            sess,
+                                            input_pl,
+                                            logits,
+                                            self.datasets)
+
+        logging.info("Evaluation Finished. All results will be saved to: " + hypes['dirs']['log_dir'])
+
+        logging.info('Raw Results:')
+        _print_eval_dict(eval_dict, prefix='(raw)   ')
+        return eval_dict
