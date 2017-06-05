@@ -10,7 +10,7 @@ import argparse
 from tensorpack.model import Model
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Path viewer')
+    parser = argparse.ArgumentParser(description='Continue training model.')
     parser.add_argument('logdir', type=str, help='Path to log directory.')
 
     args = parser.parse_args()

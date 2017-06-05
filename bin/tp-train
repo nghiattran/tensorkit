@@ -10,7 +10,7 @@ import argparse
 from tensorpack.model import Model
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Path viewer')
+    parser = argparse.ArgumentParser(description='Train a model')
     parser.add_argument('hypes', type=str, help='Path to hypes file.')
     parser.add_argument('--project', '-p', type=str, default='', help='Project name.')
     parser.add_argument('--name', '-n', type=str, default='', help='Name.')
