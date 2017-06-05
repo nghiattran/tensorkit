@@ -181,11 +181,11 @@ class Model(object):
         self.architect = Architect()
 
         # Sanity check
-        assert issubclass(type(self.datasets), DatasetsBase), 'Got ' + type(self.datasets)
-        assert issubclass(type(self.objective), ObjectiveBase), 'Got ' + type(self.objective)
-        assert issubclass(type(self.optimizer), OptimizerBase), 'Got ' + type(self.optimizer)
-        assert issubclass(type(self.evaluator), EvaluatorBase), 'Got ' + type(self.evaluator)
-        assert issubclass(type(self.architect), ArchitectBase), 'Got ' + type(self.architect)
+        assert isinstance(self.datasets, DatasetsBase), 'Got ' + str(type(self.datasets))
+        assert isinstance(self.objective, ObjectiveBase), 'Got ' + str(type(self.objective))
+        assert isinstance(self.optimizer, OptimizerBase), 'Got ' + str(type(self.optimizer))
+        assert isinstance(self.evaluator, EvaluatorBase), 'Got ' + str(type(self.evaluator))
+        assert isinstance(self.architect, ArchitectBase), 'Got ' + str(type(self.architect))
 
         logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
                             level=logging.DEBUG,
