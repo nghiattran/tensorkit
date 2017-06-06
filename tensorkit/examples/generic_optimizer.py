@@ -4,8 +4,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from tensorkit.base import OptimizerBase
 import tensorflow as tf
+
+from src.tensorkit.base import OptimizerBase
+
 
 class Optimizer(OptimizerBase):
     def get_learning_rate(self, hypes, step):

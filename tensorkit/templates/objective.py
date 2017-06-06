@@ -2,21 +2,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from src.tensorkit.base import ObjectiveBase
 
-from tensorkit.base import DatasetBase, DatasetsBase
 
-
-class Dataset(DatasetBase):
-    def next_batch(self, batch_size):
+class Objective(ObjectiveBase):
+    def loss(self, hypes, logits, labels):
         # This function needs to be implemented
         raise NotImplementedError('This function needs to be implemented')
 
-    def __len__(self):
-        # This function needs to be implemented
-        raise NotImplementedError('This function needs to be implemented')
-
-
-class Datasets(DatasetsBase):
-    def create(self, hypes):
+    def evaluate(self, hyp, images, target, logits, losses):
         # This function needs to be implemented
         raise NotImplementedError('This function needs to be implemented')

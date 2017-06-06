@@ -4,8 +4,9 @@ from __future__ import print_function
 
 import time
 
-from tensorkit.base import EvaluatorBase
 import numpy as np
+
+from src.tensorkit.base import EvaluatorBase
 
 
 def evaluate(sess, input_node, output_node, dataset, stage, eval_list, limit=-1):

@@ -2,10 +2,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from tensorflow.contrib.learn.python.learn.datasets.base import Datasets, Dataset
-
-from tensorkit.base import DatasetBase, DatasetsBase
+from tensorflow.contrib.learn.python.learn.datasets.base import Dataset
 from tensorflow.examples.tutorials.mnist import input_data
+
+from src.tensorkit.base import DatasetBase, DatasetsBase
 
 
 class Dataset(DatasetBase):

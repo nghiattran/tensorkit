@@ -2,8 +2,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from tensorkit.base import ObjectiveBase
 import tensorflow as tf
+
+from src.tensorkit.base import ObjectiveBase
+
 
 class Objective(ObjectiveBase):
     def loss(self, hypes, logits, labels):

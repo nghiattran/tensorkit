@@ -1,0 +1,1 @@
+nosetests test/live -s -v --with-coverage --cover-erase --cover-html --cover-html-dir ./coverage#!/usr/bin/env bash

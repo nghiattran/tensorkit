@@ -2,20 +2,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import errno
+import json
+import logging
 import os
+import shutil
 import sys
 import time
-import string
-import logging
-import json
-import errno
-import shutil
-
-import tensorflow as tf
-import scipy as scp
-
 from time import gmtime, strftime
-from tensorkit.base import *
+
+from src.tensorkit.base import *
 
 TFP_RUN_DIR = 'RUNS'
 TFP_MODEL_DIR = 'model_files'
@@ -371,6 +367,9 @@ class Model(object):
 
 
     def run_training(self, hypes, sess, train_graph, inference_graph, saver, start_step=0):
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(coord=coord)
+
         eval_names, eval_ops = zip(*train_graph['eval_list'])
 
         logging.info('Start straining')
@@ -423,6 +422,9 @@ class Model(object):
             if step % hypes['logging']['save_iter'] == 0 and step > 0:
                 save_path = saver.save(sess, os.path.join(hypes['dirs']['log_dir'], "model-%d" % step))
                 logging.info('Model saved at %s' % save_path)
+
+        coord.request_stop()
+        coord.join(threads)
 
 
     def do_evaluate(self, hypes, sess, input_pl, logits):
