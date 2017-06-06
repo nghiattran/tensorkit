@@ -105,3 +105,4 @@ ENV/
 RUNS
 test_template
 tensorkit/examples/mnist/data/
+coverage
