@@ -159,10 +159,8 @@ class Model(ModelBase):
         with open(os.path.join(model_path, 'hypes.json'), 'r') as hypes_file:
             hypes = json.load(hypes_file)
 
-        # Check hypes if hypes is set correctly
-        _check_hypes(hypes, model_path)
         self.hypes = hypes
-        print(model_path)
+        
         sys.path.append(model_path)
         from dataset import Datasets
         from objective import Objective
@@ -194,6 +192,8 @@ class Model(ModelBase):
     def setup(args):
         with open(args.hypes, 'r') as hypes_file:
             hypes = json.load(hypes_file)
+
+        _check_hypes(hypes, os.path.split(args.hypes)[0], is_lodg)
 
         if args.name == '':
             filename = os.path.split(args.hypes)[1]
