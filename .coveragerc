@@ -1,0 +1,19 @@
+[report]
+precision = 2
+show_missing = True
+omit = venv/*
+      venv\*
+ignore_errors = True
+
+[run]
+concurrency = gevent
+#branch = True
+source = tensorkit
+         bin
+include = tensorkit/*
+          tensorkit\*
+          bin/*
+          bin\*
+
+[html]
+directory = coverage/

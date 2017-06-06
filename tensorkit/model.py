@@ -11,7 +11,9 @@ import sys
 import time
 from time import gmtime, strftime
 
-from src.tensorkit.base import *
+from tensorkit.base import *
+import tensorflow as tf
+
 
 TFP_RUN_DIR = 'RUNS'
 TFP_MODEL_DIR = 'model_files'
@@ -150,7 +152,7 @@ def load_weight(checkpoint_dir, sess, saver):
     raise ValueError('No checkpoint found at: %s' % checkpoint_dir)
 
 
-class Model(object):
+class Model(ModelBase):
     def __init__(self, log_dir):
         # Load hypes
         model_path = os.path.join(log_dir, TFP_MODEL_DIR)
@@ -159,9 +161,8 @@ class Model(object):
 
         # Check hypes if hypes is set correctly
         _check_hypes(hypes, model_path)
-
         self.hypes = hypes
-
+        print(model_path)
         sys.path.append(model_path)
         from dataset import Datasets
         from objective import Objective
@@ -193,8 +194,6 @@ class Model(object):
     def setup(args):
         with open(args.hypes, 'r') as hypes_file:
             hypes = json.load(hypes_file)
-
-        _check_hypes(hypes, os.path.split(args.hypes)[0])
 
         if args.name == '':
             filename = os.path.split(args.hypes)[1]

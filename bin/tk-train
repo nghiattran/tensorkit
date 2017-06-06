@@ -5,8 +5,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
 import argparse
+
 from tensorkit.model import Model
 
 if __name__ == '__main__':
@@ -19,3 +19,4 @@ if __name__ == '__main__':
 
     model = Model.setup(args)
     model.train()
+    print('hi')

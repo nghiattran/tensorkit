@@ -6,7 +6,7 @@ import time
 
 import numpy as np
 
-from src.tensorkit.base import EvaluatorBase
+from tensorkit.base import EvaluatorBase
 
 
 def evaluate(sess, input_node, output_node, dataset, stage, eval_list, limit=-1):

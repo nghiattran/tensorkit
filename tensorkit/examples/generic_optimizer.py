@@ -6,7 +6,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from src.tensorkit.base import OptimizerBase
+from tensorkit.base import OptimizerBase
 
 
 class Optimizer(OptimizerBase):

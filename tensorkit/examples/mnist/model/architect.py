@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from src.tensorkit.base import ArchitectBase
+from tensorkit.base import ArchitectBase
 
 
 class VariableHanlder(object):

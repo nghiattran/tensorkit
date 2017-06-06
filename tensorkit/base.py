@@ -3,7 +3,25 @@ from __future__ import division
 from __future__ import print_function
 
 import abc, six
-import tensorflow as tf
+
+@six.add_metaclass(abc.ABCMeta)
+class ModelBase():
+    @staticmethod
+    @abc.abstractmethod
+    def setup(args):
+        return NotImplemented
+
+    @abc.abstractmethod
+    def evaluate(self):
+        return NotImplemented
+
+    @abc.abstractmethod
+    def train(self):
+        return NotImplemented
+
+    @abc.abstractmethod
+    def continue_training(self):
+        return NotImplemented
 
 
 @six.add_metaclass(abc.ABCMeta)

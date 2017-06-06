@@ -1,0 +1,26 @@
+{
+    "model": {
+        "dataset_file": "dataset.py",
+        "architecture_file" : "architect.py",
+        "objective_file" : "objective.py",
+        "optimizer_file" : "optimizer.py",
+        "evaluator_file" : "evaluator.py"
+    },
+    "data": {
+        "train_file": null,
+        "val_file":null
+    },
+    "logging": {
+        "display_iter": 5,
+        "eval_iter": 100,
+        "save_iter": 1000
+    },
+    "solver": {
+        "opt": "SGD",
+        "learning_rate_step": null,
+        "reg_strength": 1e-8,
+        "learning_rate": 0.5,
+        "max_steps": 1001,
+        "batch_size": 300
+    }
+}

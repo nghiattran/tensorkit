@@ -5,9 +5,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import shutil
 import argparse
 import os
+import shutil
+
 from tensorkit.model import mkdir_p
 import tensorkit
 
@@ -15,12 +16,13 @@ import tensorkit
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate model to path')
     parser.add_argument('destination', type=str, help='Destination folder for generated model.')
+    parser.add_argument('--verbose', '-v', action='store_true', help='Verbose.')
 
     args = parser.parse_args()
     mkdir_p(args.destination)
 
     dir_path = os.path.dirname(os.path.realpath(tensorkit.model.__file__))
-    template_path = os.path.join(dir_path, '..', 'tp-templates')
+    template_path = os.path.join(dir_path, 'templates')
     src_files = os.listdir(template_path)
 
     for file in src_files:
@@ -28,4 +30,6 @@ if __name__ == '__main__':
         name, ext = os.path.splitext(file)
         if os.path.isfile(file_path) and ext != '.pyc':
             shutil.copy(file_path, args.destination)
-            print(' ', file, 'is generated at:', args.destination)
+
+            if not args.verbose:
+                print(' ', file, 'is generated at:', args.destination)

@@ -103,4 +103,5 @@ ENV/
 
 .idea
 RUNS
-test
+test_template
+tensorkit/examples/mnist/data/
