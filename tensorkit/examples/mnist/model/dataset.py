@@ -4,7 +4,7 @@ from __future__ import print_function
 
 from tensorflow.contrib.learn.python.learn.datasets.base import Datasets, Dataset
 
-from tensorpack.base import DatasetBase, DatasetsBase
+from tensorkit.base import DatasetBase, DatasetsBase
 from tensorflow.examples.tutorials.mnist import input_data
 
 

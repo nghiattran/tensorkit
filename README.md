@@ -1,4 +1,4 @@
-# tfpack
+# tensorkit
 
 A simple toolkit to easily use Tensorflow.
 
@@ -7,8 +7,8 @@ A simple toolkit to easily use Tensorflow.
 You can install TensorVision and its requirements via:
 
 ```bash
-$ pip install -r https://raw.githubusercontent.com/nghiattran/tfpack/master/requirements.txt
-$ pip install https://github.com/nghiattran/tfpack/archive/master.zip
+$ pip install -r https://raw.githubusercontent.com/nghiattran/tensorkit/master/requirements.txt
+$ pip install https://github.com/nghiattran/tensorkit/archive/master.zip
 ```
 
 ## Acknowledge

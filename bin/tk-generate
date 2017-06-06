@@ -8,8 +8,8 @@ from __future__ import print_function
 import shutil
 import argparse
 import os
-from tensorpack.model import mkdir_p
-import tensorpack
+from tensorkit.model import mkdir_p
+import tensorkit
 
 
 if __name__ == '__main__':
@@ -19,7 +19,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     mkdir_p(args.destination)
 
-    dir_path = os.path.dirname(os.path.realpath(tensorpack.model.__file__))
+    dir_path = os.path.dirname(os.path.realpath(tensorkit.model.__file__))
     template_path = os.path.join(dir_path, '..', 'tp-templates')
     src_files = os.listdir(template_path)
 

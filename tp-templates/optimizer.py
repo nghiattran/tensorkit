@@ -1,1 +1,0 @@
-from tensorpack.examples.generic_optimizer import Optimizer

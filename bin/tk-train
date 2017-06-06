@@ -7,7 +7,7 @@ from __future__ import print_function
 
 
 import argparse
-from tensorpack.model import Model
+from tensorkit.model import Model
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train a model')

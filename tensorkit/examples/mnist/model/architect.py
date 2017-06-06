@@ -2,7 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from tensorpack.base import ArchitectBase
+from tensorkit.base import ArchitectBase
 import tensorflow as tf
 
 

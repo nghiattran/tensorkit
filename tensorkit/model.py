@@ -15,7 +15,7 @@ import tensorflow as tf
 import scipy as scp
 
 from time import gmtime, strftime
-from tensorpack.base import *
+from tensorkit.base import *
 
 TFP_RUN_DIR = 'RUNS'
 TFP_MODEL_DIR = 'model_files'
@@ -294,7 +294,7 @@ class Model(object):
             'logits': logits
         }
 
-    def build_graph(self, sess, hypes):
+    def build_graph(self, sess, hypes, writer=True):
         with tf.name_scope("Data"):
             input_pl = tf.placeholder(tf.float32, name='input')
             labels_pl = tf.placeholder(tf.float32, name='labels')
@@ -303,9 +303,10 @@ class Model(object):
                                                 input_pl=input_pl,
                                                 labels_pl=labels_pl)
 
-        summary_writer = tf.summary.FileWriter(hypes['dirs']['log_dir'],
-                                               graph=sess.graph)
-        train_graph['summary_writer'] = summary_writer
+        if writer:
+            summary_writer = tf.summary.FileWriter(hypes['dirs']['log_dir'],
+                                                   graph=sess.graph)
+            train_graph['summary_writer'] = summary_writer
 
         inference_graph = self.build_inference_graph(hypes=hypes,
                                                      input_pl=input_pl)
@@ -317,7 +318,7 @@ class Model(object):
     def evaluate(self):
         hypes = self.hypes
         with tf.Session() as sess:
-            train_graph, inference_graph, saver = self.build_graph(sess, hypes)
+            train_graph, inference_graph, saver = self.build_graph(sess, hypes, False)
 
             load_weight(checkpoint_dir=hypes['dirs']['log_dir'],
                                        sess=sess,
@@ -359,6 +360,8 @@ class Model(object):
                                        sess=sess,
                                        saver=saver)
 
+            hypes['step'] = current_step
+
             self.run_training(hypes=hypes,
                               sess=sess,
                               train_graph=train_graph,
@@ -373,6 +376,8 @@ class Model(object):
         logging.info('Start straining')
 
         for step in range(start_step, hypes['solver']['max_steps']):
+            hypes['step'] = step
+
             lr = self.optimizer.get_learning_rate(hypes, step)
             input, labels = self.datasets.train.next_batch(hypes['solver']['batch_size'])
 
@@ -412,7 +417,6 @@ class Model(object):
                                              input_pl=inference_graph['input_pl'],
                                              logits=inference_graph['logits'])
 
-                logging.info("Evaluation Finished. All results will be saved to: " + hypes['dirs']['log_dir'])
                 _write_eval_dict_to_summary(eval_dict, 'Evaluation',
                                             train_graph['summary_writer'], step)
 

@@ -4,7 +4,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from tensorpack.base import OptimizerBase
+from tensorkit.base import OptimizerBase
 import tensorflow as tf
 
 class Optimizer(OptimizerBase):
