@@ -19,6 +19,7 @@ import tensorflow as tf
 TFP_RUN_DIR = 'RUNS'
 TFP_MODEL_DIR = 'model_files'
 TFP_IMAGE_DIR = 'images'
+TFP_EVALUATION_DIR = 'evaluation'
 
 def mkdir_p(path):
     try:
@@ -172,12 +173,6 @@ class Model(ModelBase):
         assert isinstance(self.evaluator, EvaluatorBase), 'Got ' + str(type(self.evaluator))
         assert isinstance(self.architect, ArchitectBase), 'Got ' + str(type(self.architect))
 
-        logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
-                            level=logging.DEBUG,
-                            stream=sys.stdout)
-
-        create_filewrite_handler(os.path.join(log_dir, 'output.log'))
-
     @staticmethod
     def setup(args):
         with open(args.hypes, 'r') as hypes_file:
@@ -324,6 +319,17 @@ class Model(ModelBase):
 
     def evaluate(self):
         hypes = self._hypes
+
+        hypes['dirs']['log_dir'] = os.path.join(hypes['dirs']['log_dir'], TFP_EVALUATION_DIR)
+        mkdir_p(os.path.join(hypes['dirs']['log_dir'], TFP_EVALUATION_DIR))
+
+        logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
+                            level=logging.DEBUG,
+                            stream=sys.stdout)
+
+        create_filewrite_handler(os.path.join(hypes['dirs']['log_dir'], 'output.log'))
+
+
         with tf.Session() as sess:
             coord = tf.train.Coordinator()
             threads = tf.train.start_queue_runners(coord=coord)
@@ -344,6 +350,13 @@ class Model(ModelBase):
     
     def train(self):
         hypes = self._hypes
+
+        logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
+                            level=logging.DEBUG,
+                            stream=sys.stdout)
+
+        create_filewrite_handler(os.path.join(hypes['dirs']['log_dir'], 'output.log'))
+
         with tf.Session() as sess:
             train_graph, inference_graph, saver = self.build_graph(sess, hypes)
 
@@ -366,6 +379,14 @@ class Model(ModelBase):
 
     def continue_training(self):
         hypes = self._hypes
+
+        logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
+                            level=logging.DEBUG,
+                            stream=sys.stdout)
+
+        create_filewrite_handler(os.path.join(hypes['dirs']['log_dir'], 'output.log'),
+                                 mode='a')
+
         with tf.Session() as sess:
             train_graph, inference_graph, saver = self.build_graph(sess, hypes)
 
