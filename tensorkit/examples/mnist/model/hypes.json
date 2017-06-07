@@ -13,6 +13,7 @@
     "logging": {
         "display_iter": 5,
         "eval_iter": 100,
+        "write_iter": 100,
         "save_iter": 100
     },
     "solver": {

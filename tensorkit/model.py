@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import copy
 import errno
 import json
 import logging
@@ -141,17 +142,6 @@ def create_filewrite_handler(logging_file, mode='w'):
     return filewriter
 
 
-def load_weight(checkpoint_dir, sess, saver):
-    ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
-    if ckpt and ckpt.model_checkpoint_path:
-        logging.info(ckpt.model_checkpoint_path)
-        file = os.path.basename(ckpt.model_checkpoint_path)
-        checkpoint_path = os.path.join(checkpoint_dir, file)
-        saver.restore(sess, checkpoint_path)
-        return int(file.split('-')[1])
-    raise ValueError('No checkpoint found at: %s' % checkpoint_dir)
-
-
 class Model(ModelBase):
     def __init__(self, log_dir):
         # Load hypes
@@ -159,7 +149,7 @@ class Model(ModelBase):
         with open(os.path.join(model_path, 'hypes.json'), 'r') as hypes_file:
             hypes = json.load(hypes_file)
 
-        self.hypes = hypes
+        self._hypes = hypes
 
         sys.path.append(model_path)
         from dataset import Datasets
@@ -250,9 +240,23 @@ class Model(ModelBase):
 
         return Model(run_dir)
 
+    @property
+    def hypes(self):
+        return copy.deepcopy(self._hypes)
+
+    def load_weights(self, checkpoint_dir, sess, saver):
+        ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
+        if ckpt and ckpt.model_checkpoint_path:
+            logging.info(ckpt.model_checkpoint_path)
+            file = os.path.basename(ckpt.model_checkpoint_path)
+            checkpoint_path = os.path.join(checkpoint_dir, file)
+            saver.restore(sess, checkpoint_path)
+            return int(file.split('-')[1])
+        raise ValueError('No checkpoint found at: %s' % checkpoint_dir)
+
     def build_training_graph(self, hypes, input_pl, labels_pl):
         phase = 'train'
-        logits = self.architect.build_graph(self.hypes, input_pl, phase.lower())
+        logits = self.architect.build_graph(self._hypes, input_pl, phase.lower())
 
         with tf.name_scope("Loss"):
             losses = self.objective.loss(hypes, logits, labels_pl)
@@ -264,6 +268,13 @@ class Model(ModelBase):
 
             # Build training operation
             train_op = self.optimizer.train(hypes, losses, global_step, learning_rate)
+
+        if 'total_loss' not in losses:
+            raise ValueError('"loss" function in Objecttive object must return an object with a key named "total_loss"')
+
+        with tf.name_scope("Training"):
+            tf.summary.scalar('Training/total_loss', losses['total_loss'])
+            tf.summary.scalar('Training/learning_rate', learning_rate)
 
         summary_op = tf.summary.merge_all()
 
@@ -282,7 +293,7 @@ class Model(ModelBase):
         phase = 'Inference'
         with tf.name_scope(phase):
             tf.get_variable_scope().reuse_variables()
-            logits = self.architect.build_graph(self.hypes, input_pl, phase.lower())
+            logits = self.architect.build_graph(self._hypes, input_pl, phase.lower())
 
         return {
             'input_pl': input_pl,
@@ -311,21 +322,27 @@ class Model(ModelBase):
         return train_graph, inference_graph, saver
 
     def evaluate(self):
-        hypes = self.hypes
+        hypes = self._hypes
         with tf.Session() as sess:
+            coord = tf.train.Coordinator()
+            threads = tf.train.start_queue_runners(coord=coord)
+
             train_graph, inference_graph, saver = self.build_graph(sess, hypes, False)
 
-            load_weight(checkpoint_dir=hypes['dirs']['log_dir'],
-                                       sess=sess,
-                                       saver=saver)
+            self.load_weights(checkpoint_dir=hypes['dirs']['log_dir'],
+                              sess=sess,
+                              saver=saver)
 
             self.do_evaluate(hypes=hypes,
                              sess=sess,
                              input_pl=inference_graph['input_pl'],
                              logits=inference_graph['logits'])
 
+            coord.request_stop()
+            coord.join(threads)
+    
     def train(self):
-        hypes = self.hypes
+        hypes = self._hypes
         with tf.Session() as sess:
             train_graph, inference_graph, saver = self.build_graph(sess, hypes)
 
@@ -347,13 +364,13 @@ class Model(ModelBase):
 
 
     def continue_training(self):
-        hypes = self.hypes
+        hypes = self._hypes
         with tf.Session() as sess:
             train_graph, inference_graph, saver = self.build_graph(sess, hypes)
 
-            current_step = load_weight(checkpoint_dir=hypes['dirs']['log_dir'],
-                                       sess=sess,
-                                       saver=saver)
+            current_step = self.load_weights(checkpoint_dir=hypes['dirs']['log_dir'],
+                                             sess=sess,
+                                             saver=saver)
 
             hypes['step'] = current_step
 
@@ -385,15 +402,12 @@ class Model(ModelBase):
                 train_graph['labels_pl']: labels
             }
 
-            ops = [
-                train_graph['train_op']
-            ]
-            _ = sess.run(
-                ops,
+            sess.run(
+                train_graph['train_op'],
                 feed_dict=feed_dict
             )
 
-            if step % hypes['logging']['display_iter'] == 0:
+            if 'display_iter' in hypes['logging'] and step % hypes['logging']['display_iter'] == 0:
                 start_time = time.time()
                 ops = [
                     train_graph['train_op'],
@@ -408,6 +422,11 @@ class Model(ModelBase):
                 eval_results = sess.run(eval_ops, feed_dict=feed_dict)
 
                 _print_eval_dict_one_line(eval_names, eval_results, prefix='   (raw)')
+
+            if 'write_iter' in hypes['logging'] and step % hypes['logging']['write_iter'] == 0:
+                summary = sess.run(train_graph['summary_op'],
+                                   feed_dict=feed_dict)
+                train_graph['summary_writer'].add_summary(summary, step)
 
             if step % hypes['logging']['eval_iter'] == 0 and step > 0:
                 eval_dict = self.do_evaluate(hypes=hypes,
