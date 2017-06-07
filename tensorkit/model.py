@@ -292,7 +292,6 @@ class Model(ModelBase):
     def build_inference_graph(self, hypes, input_pl):
         phase = 'Inference'
         with tf.name_scope(phase):
-            tf.get_variable_scope().reuse_variables()
             logits = self.architect.build_graph(self._hypes, input_pl, phase.lower())
 
         return {
@@ -313,6 +312,8 @@ class Model(ModelBase):
             summary_writer = tf.summary.FileWriter(hypes['dirs']['log_dir'],
                                                    graph=sess.graph)
             train_graph['summary_writer'] = summary_writer
+
+        tf.get_variable_scope().reuse_variables()
 
         inference_graph = self.build_inference_graph(hypes=hypes,
                                                      input_pl=input_pl)
