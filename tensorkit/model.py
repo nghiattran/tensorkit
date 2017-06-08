@@ -320,15 +320,13 @@ class Model(ModelBase):
     def evaluate(self):
         hypes = self._hypes
 
-        hypes['dirs']['log_dir'] = os.path.join(hypes['dirs']['log_dir'], TFP_EVALUATION_DIR)
-        mkdir_p(os.path.join(hypes['dirs']['log_dir'], TFP_EVALUATION_DIR))
-
         logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
                             level=logging.DEBUG,
                             stream=sys.stdout)
 
-        create_filewrite_handler(os.path.join(hypes['dirs']['log_dir'], 'output.log'))
-
+        eval_log_dir = os.path.join(hypes['dirs']['log_dir'], TFP_EVALUATION_DIR)
+        mkdir_p(eval_log_dir)
+        create_filewrite_handler(os.path.join(eval_log_dir, 'output.log'))
 
         with tf.Session() as sess:
             coord = tf.train.Coordinator()
@@ -339,6 +337,8 @@ class Model(ModelBase):
             self.load_weights(checkpoint_dir=hypes['dirs']['log_dir'],
                               sess=sess,
                               saver=saver)
+
+            hypes['dirs']['log_dir'] = eval_log_dir
 
             self.do_evaluate(hypes=hypes,
                              sess=sess,
